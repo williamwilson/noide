@@ -6,17 +6,14 @@ module.exports = (function() {
     /* private */
     var clients = [];
     var doc;
+    var docio;
 
     var updateAllClients = function() {
-	var i;
-	for (i = 0; i < clients.length; i++) {
-	    clients[i].send(doc.lines);
-	}
+	docio.emit('update', doc.lines);
     };
 
     /* public */
-    noide.initialize = function(socket) {
-	console.log('noide initializing...');
+    noide.initialize = function(io) {
 	doc = new Document();
 	doc.on('lineAdded', function(data) {
 	    updateAllClients();
@@ -25,15 +22,15 @@ module.exports = (function() {
 	    updateAllClients();
 	});
 
-	socket.sockets.on('connection', function(client) {
+	/* todo: supply the namespace as a parameter */
+	docio = io.of('/noide/doc').on('connection', function(client) {
 	    clients.push(client);
-	    console.log('Client ' + client.sessionId + ' connected.');
-	    client.send(doc.lines);
-	    client.on('message', function(data) {
-		
+	    client.on('addLine', function(data) {
+		doc.addLine(null, data.text);
 	    });
+	    client.emit('update', doc.lines);
 	});
-	console.log('noide initialized.');
+	/* todo: initialize chat on the specified io */
     };
 
     return noide;
@@ -83,7 +80,7 @@ Document.prototype.emit = function(event, data) {
 
 Document.generateLineId = function() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-	var r = Math.random() & 16|0, v = c == 'x' ? r : (r&0x3|0x8);
+	var r = Math.random() * 16|0, v = c == 'x' ? r : (r&0x3|0x8);
 	return v.toString(16);
     });
 };

@@ -1,5 +1,5 @@
 var connect = require('./node_modules/connect');
-var io = require('./node_modules/socket.io');
+var socketio = require('./node_modules/socket.io');
 var fs = require('fs');
 var noide = require('./noide.js');
 
@@ -12,8 +12,5 @@ var server = connect.createServer(
 );
 server.listen(8000);
 
-var socket = io.listen(server);
-noide.initialize(socket);
-/*socket.sockets.on('connection', function(socket) {
-    console.log('client connected');
-});*/
+var io = socketio.listen(server);
+noide.initialize(io);

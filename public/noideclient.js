@@ -1,20 +1,20 @@
-(function() {
-    var socket;
+(function($) {
+    $(function() {
+	var docio;
 
-    alert('initializing socket');
+	docio = io.connect('http://localhost:8000/noide/doc');
+	docio.on('update', function(data) {
+	    var doc, i, text;
+	    doc = document.getElementById('document');
+	    text = '';
+	    for (i = 0; i < data.length; i++) {
+		text += data[i].text + '\n';
+	    }
+	    doc.value = text;
+	});
 
-    socket = io.connect('http://localhost:8000');
-
-    socket.on('message', function(data) {
-	alert('received: ' + data);
-	var doc, i, text;
-	doc = document.getElementById('document');
-	text = '';
-	for (i = 0; i < data.length; i++) {
-	    text += data[i] + '\n';
-	}
-	doc.value = text;
+	$('#addLineButton').click(function() {
+	    docio.emit('addLine', {text:$('#lineText').val()});
+	});
     });
-
-    socket.connect();
-}());
+}(jQuery));
