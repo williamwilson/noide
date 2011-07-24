@@ -4,11 +4,37 @@
 <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
 <script type="text/javascript" src="/socket.io/socket.io.js"></script>
 <script type="text/javascript" src="noideclient.js"></script>
+<style type="text/css">
+.document
+{
+  width: 100%;
+  height: 400px;
+  font-family: monospace;
+  background-color: white;
+  color: black;
+}
+
+.line
+{
+  display: block;
+}
+
+.line_alt
+{
+  background-color: #ccc;
+}
+
+.cursor
+{
+  background-color: black;
+  color: white;
+}
+</style>
 </head>
 <body>
 <h1>noide</h1>
-<textarea id="document" rows="25" cols="100">
-</textarea>
+<div id="document" class="document">
+</div>
 <br />
 <input type="text" id="lineText"></input>
 <button id="addLineButton">Add Line</button>
