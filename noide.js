@@ -28,6 +28,9 @@ module.exports = (function() {
 	    client.on('addLine', function(data) {
 		doc.addLine(null, data.text);
 	    });
+	    client.on('updateLine', function(data) {
+		doc.updateLine(data.id, data.text);
+	    });
 	    client.emit('update', doc.lines);
 	});
 	/* todo: initialize chat on the specified io */

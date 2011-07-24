@@ -3,7 +3,7 @@
 	var docio, doc, cursor, updateDocument;
 
 	doc = {};
-	cursor = {line:'',column:0};
+	cursor = {line:null,column:0};
 
 	updateDocument = function(lineid) {
 	    var documentElement, i, lineclass, originalLine, cursorLine;
@@ -27,21 +27,34 @@
 		$('#' + lineid).html(doc.lines[i].text);
 	    }
 
-	    originalLine = $('#' + cursor.line).html();
-	    cursorLine = '';
-	    if (cursor.column > 0) {
-		cursorLine = originalLine.slice(0, cursor.column);
+	    if (cursor.line) {
+		originalLine = $('#' + cursor.line.id).html();
+		cursorLine = '';
+		if (cursor.column > 0) {
+		    cursorLine = originalLine.slice(0, cursor.column);
+		}
+		cursorLine += '<span class="cursor">' + originalLine.slice(cursor.column, cursor.column + 1);
+		cursorLine += '</span>' + originalLine.slice(cursor.column + 1);
+		$('#' + cursor.line.id).html(cursorLine);
 	    }
-	    cursorLine += '<span class="cursor">' + originalLine.slice(cursor.column, cursor.column + 1);
-	    cursorLine += '</span>' + originalLine.slice(cursor.column + 1);
-	    $('#' + cursor.line).html(cursorLine);
 	};
 	
 	docio = io.connect('http://localhost:8000/noide/doc');
 	docio.on('update', function(data) {
+	    var i;
+
 	    doc.lines = data;
-	    if (cursor.line === '') {
-		cursor.line = data[0].id;
+	    /* update the cursor reference */
+	    if (!cursor.line) {
+		cursor.line = data[0];
+	    }
+	    else {
+		for (i = 0; i < data.length; i++) {
+		    if (cursor.line.id === data[i].id) {
+			cursor.line = data[i];
+			break;
+		    }
+		}
 	    }
 
 	    updateDocument();
@@ -60,35 +73,31 @@
 
 	    if (eventObject.keyCode === 39) {
 		/* RIGHT */
-		for (i = 0; i < doc.lines.length; i++) {
-		    if (doc.lines[i].id == cursor.line) {
-			line = doc.lines[i];
-			break;
-		    }
-		}
+		line = cursor.line;
 		if (cursor.column < (line.text.length - 1)) {
 		    cursor.column = cursor.column + 1;
-		    updateDocument(cursor.line);
+		    updateDocument(cursor.line.id);
 		}
 	    }
 	    else if (eventObject.keyCode === 37) {
 		/* LEFT */
 		if (cursor.column > 0) {
 		    cursor.column = cursor.column - 1;
-		    updateDocument(cursor.line);
+		    updateDocument(cursor.line.id);
 		}
 	    }
 	    else if (eventObject.keyCode === 38) {
 		/* UP */
 		for (i = 0; i < doc.lines.length; i++) {
-		    if (doc.lines[i].id === cursor.line) {
+		    if (doc.lines[i] === cursor.line) {
 			break;
 		    }
 		    previousLine = doc.lines[i];
 		}
 
 		if (previousLine) {
-		    cursor.line = previousLine.id;
+		    docio.emit('updateLine', {id:cursor.line.id, text:cursor.line.text});
+		    cursor.line = previousLine;
 		    cursor.column = Math.min(cursor.column, (previousLine.text.length - 1));
 		    updateDocument();
 		}
@@ -96,43 +105,48 @@
 	    else if (eventObject.keyCode === 40) {
 		/* DOWN */
 		for (i = 0; i < doc.lines.length; i++) {
-		    if (doc.lines[i].id === cursor.line) {
+		    if (doc.lines[i] === cursor.line) {
 			nextLine = doc.lines[i + 1];
 			break;
 		    }
 		}
 
 		if (nextLine) {
-		    cursor.line = nextLine.id;
+		    docio.emit('updateLine', {id:cursor.line.id, text:cursor.line.text});
+		    cursor.line = nextLine;
 		    cursor.column = Math.min(cursor.column, (nextLine.text.length - 1));
 		    updateDocument();
 		}
 	    }
 	}).keypress(function(eventObject) {
 	    if (eventObject.charCode > 0) {
-		for (i = 0; i < doc.lines.length; i++) {
-		    if (doc.lines[i].id === cursor.line) {
-			line = doc.lines[i];
-			break;
-		    }
-		}
+		line = cursor.line;
 		if (line) {
-		    line.text = line.text.slice(0, cursor.column + 1) + String.fromCharCode(eventObject.charCode) + line.text.slice(cursor.column + 2);
+		    /* note: we are emulating 'insert' mode, so don't overwrite the character under the cursor */
+		    line.text = line.text.slice(0, cursor.column) + String.fromCharCode(eventObject.charCode) + line.text.slice(cursor.column);
 		    cursor.column = cursor.column + 1;
 		    updateDocument(line.id);
 		}
 	    }
 	    else if (eventObject.keyCode === 8) {
 		/* BACKSPACE */
-		for (i = 0; i < doc.lines.length; i++) {
-		    if (doc.lines[i].id === cursor.line) {
-			line = doc.lines[i];
-			break;
-		    }
+		if (cursor.column === 0) {
+		    return;
 		}
+
+		line = cursor.line;
+		if (line) {
+		    /* note: delete the character before the cursor, not after it */
+		    line.text = line.text.slice(0, cursor.column - 1) + line.text.slice(cursor.column);
+		    cursor.column = cursor.column - 1;
+		    updateDocument(line.id);
+		}
+	    }
+	    else if (eventObject.keyCode === 46) {
+		/* DELETE */
+		line = cursor.line;
 		if (line) {
 		    line.text = line.text.slice(0, cursor.column) + line.text.slice(cursor.column + 1);
-		    cursor.column = cursor.column - 1;
 		    updateDocument(line.id);
 		}
 	    }
